@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>生物医药合同审阅工作台</title>
+  <style>
+    :root{--navy:#143d64;--blue:#236394;--bg:#f4f6f8;--panel:#fff;--text:#1d2732;--muted:#667282;--line:#dfe4e9;--danger:#9f3429}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.55}.wrap{max-width:1120px;margin:auto;padding:32px 20px 62px}.hero{background:linear-gradient(135deg,#143d64,#266695);border-radius:16px;padding:30px;color:#fff}.eyebrow{font-size:12px;letter-spacing:.1em;opacity:.8}.hero h1{margin:5px 0 8px;font-size:30px}.hero p{margin:0;color:#eaf3fb}.notice{margin:18px 0;padding:13px 15px;border-left:4px solid var(--blue);background:#eaf3fa;color:#234c6d;font-size:14px}.grid{display:grid;grid-template-columns:360px 1fr;gap:18px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px}.panel h2{font-size:18px;margin:0 0 8px}.panel h3{font-size:15px;margin:22px 0 9px}.muted{color:var(--muted);font-size:13px}.drop{margin-top:12px;border:2px dashed #b9c8d6;border-radius:10px;padding:16px;background:#f9fbfd}.drop input{display:block;width:100%;margin:9px 0 11px}button,.button{font:inherit;padding:8px 12px;border:1px solid #b9c2cb;border-radius:8px;background:#fff;color:var(--text);cursor:pointer;text-decoration:none}.primary{background:var(--navy);border-color:var(--navy);color:#fff}.danger{color:var(--danger);border-color:#d7a59e}.top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}.rows{display:grid;gap:9px}.row{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding:12px 0}.row:first-child{border-top:0;padding-top:0}.title{font-weight:600;overflow-wrap:anywhere}.meta{font-size:12px;color:var(--muted);margin-top:3px}.actions{display:flex;flex-wrap:wrap;justify-content:flex-end;align-content:flex-start;gap:6px;min-width:155px}.empty{color:var(--muted);padding:12px 0}.foot{font-size:13px;color:var(--muted);margin:20px 0 0}.pill{display:inline-block;background:#e7f0f8;color:#23557d;border-radius:999px;padding:2px 8px;font-size:12px;margin-left:7px}@media(max-width:800px){.wrap{padding:18px 12px}.hero{padding:22px}.hero h1{font-size:24px}.grid{grid-template-columns:1fr}.row{display:block}.actions{justify-content:flex-start;margin-top:9px}}
+  </style>
+</head>
+<body>
+<main class="wrap">
+  <section class="hero"><div class="eyebrow">LOCAL-FIRST · BIOPHARMA LEGAL REVIEW</div><h1>生物医药合同审阅工作台</h1><p>合同文件与审阅输出仅保存于当前浏览器的本地库；本页面不会上传任何案件材料。</p></section>
+  <p class="notice"><strong>隐私提示：</strong>请仅在受控电脑和受控浏览器中使用。清除浏览器数据会清除本地库；合同原件仍应另行保存在你的本地受控文件夹。</p>
+  <section class="grid">
+    <aside class="panel">
+      <h2>导入本地材料</h2>
+      <p class="muted">选择文件只会把副本写入本浏览器的本地 IndexedDB，不会发送至服务器。</p>
+      <form class="drop" id="inputForm"><label>合同原件（.doc / .docx / .pdf）</label><input id="inputFile" type="file" accept=".doc,.docx,.pdf" required><button class="primary">加入案件库</button></form>
+      <form class="drop" id="outputForm"><label>审阅输出（.html）</label><input id="outputFile" type="file" accept=".html,text/html" required><button class="primary">加入审阅库</button></form>
+      <form class="drop" id="feedbackForm"><label>律师反馈包（.json / .doc / .docx / .pdf）</label><input id="feedbackFile" type="file" accept=".json,.doc,.docx,.pdf" required><button>回收至本地</button></form>
+      <p id="status" class="muted" aria-live="polite"></p>
+      <h3>本地库维护</h3><button id="exportCatalog">导出清单</button> <button class="danger" id="clearVault">清空本地库</button>
+    </aside>
+    <section class="panel">
+      <div class="top"><h2>本地案件库 <span class="pill" id="count">0</span></h2><button id="refresh">刷新</button></div>
+      <h3>输入合同</h3><div id="inputs" class="rows"></div>
+      <h3>审阅输出</h3><div id="outputs" class="rows"></div>
+      <h3>已回收反馈</h3><div id="feedbacks" class="rows"></div>
+    </section>
+  </section>
+  <p class="foot">反馈包需由律师自行导出并回传给 Skill 维护人；只有人工脱敏、审核并发布的规则才可进入审阅 Skill。</p>
+</main>
+<script>
+const DB='lawyer-local-vault',STORE='files';const $=id=>document.getElementById(id);let db;
+function openDb(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE,{keyPath:'id'});r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+function put(file,kind){return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put({id:crypto.randomUUID(),kind,name:file.name,size:file.size,type:file.type||'application/octet-stream',updatedAt:new Date().toISOString(),blob:file});tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)})}
+function all(){return new Promise((resolve,reject)=>{const r=db.transaction(STORE).objectStore(STORE).getAll();r.onsuccess=()=>resolve(r.result.sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)));r.onerror=()=>reject(r.error)})}
+function remove(id){return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).delete(id);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)})}
+function clear(){return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).clear();tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)})}
+const fmt=n=>n<1024?`${n} B`:n<1048576?`${(n/1024).toFixed(1)} KB`:`${(n/1048576).toFixed(1)} MB`;const date=s=>new Date(s).toLocaleString('zh-CN');
+function download(item){const a=document.createElement('a');a.href=URL.createObjectURL(item.blob);a.download=item.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function openReview(item){const u=URL.createObjectURL(item.blob);window.open(u,'_blank','noopener');setTimeout(()=>URL.revokeObjectURL(u),60000)}
+function render(items,kind,target){const root=$(target),subset=items.filter(x=>x.kind===kind);root.innerHTML=subset.length?subset.map(x=>`<div class="row"><div><div class="title">${escapeHtml(x.name)}</div><div class="meta">${fmt(x.size)} · ${date(x.updatedAt)}</div></div><div class="actions">${kind==='output'?`<button data-open="${x.id}">打开审阅</button>`:''}<button data-download="${x.id}">下载</button><button class="danger" data-delete="${x.id}">删除</button></div></div>`).join(''):'<div class="empty">暂无文件</div>';root.querySelectorAll('[data-download]').forEach(b=>b.onclick=()=>download(items.find(x=>x.id===b.dataset.download)));root.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openReview(items.find(x=>x.id===b.dataset.open)));root.querySelectorAll('[data-delete]').forEach(b=>b.onclick=async()=>{if(confirm('仅删除当前浏览器本地副本，是否继续？')){await remove(b.dataset.delete);refresh()}})}
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+async function refresh(){const items=await all();$('count').textContent=items.length;render(items,'input','inputs');render(items,'output','outputs');render(items,'feedback','feedbacks')}
+function bind(form,input,kind,label){$(form).onsubmit=async e=>{e.preventDefault();const file=$(input).files[0];if(!file)return;$('status').textContent='正在写入本地库…';try{await put(file,kind);$(form).reset();$('status').textContent=`已${label}到当前浏览器本地库。`;refresh()}catch(err){$('status').textContent='保存失败：'+err.message}}}
+$('refresh').onclick=refresh;bind('inputForm','inputFile','input','加入');bind('outputForm','outputFile','output','加入');bind('feedbackForm','feedbackFile','feedback','回收');$('clearVault').onclick=async()=>{if(confirm('这会永久删除当前浏览器中的全部本地副本，是否继续？')){await clear();refresh()}};$('exportCatalog').onclick=async()=>{const items=await all();const safe=items.map(({id,kind,name,size,type,updatedAt})=>({id,kind,name,size,type,updatedAt}));download({name:'法律审阅工作台-本地清单.json',blob:new Blob([JSON.stringify({exportedAt:new Date().toISOString(),items:safe},null,2)],{type:'application/json'})})};(async()=>{db=await openDb();refresh()})().catch(e=>{$('status').textContent='本地数据库初始化失败：'+e.message});
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+# Client-confidential material: never commit these folders or exported feedback.
+case/
+output/
+data/
+feedback/
+*.doc
+*.docx
+*.pdf
+*.feedback.json
+
+# Local/editor files
+.DS_Store
+node_modules/
+.env
